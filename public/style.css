@@ -5,79 +5,35 @@
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f5f5f5;
+  font-family: Georgia, serif;
+  background: beige;
   color: #222;
+  padding: 60px 40px;
 }
 
-header {
-  background: #fff;
-  border-bottom: 1px solid #ddd;
-  padding: 20px 32px;
-}
-
-header h1 {
-  font-size: 28px;
+h1 {
+  font-size: 36px;
   color: #072a83;
+  margin-bottom: 10px;
 }
 
-header p {
-  margin-top: 4px;
-  font-size: 14px;
-  color: #666;
-}
-
-main {
-  max-width: 700px;
-  margin: 40px auto;
-  padding: 0 24px;
-}
-
-main h2 {
+p {
   font-size: 16px;
-  color: #444;
-  margin-bottom: 16px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.route-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.route-list li {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 16px 20px;
-}
-
-.route-list li span {
-  display: block;
-  font-size: 13px;
   color: #888;
-  margin-bottom: 6px;
+  margin-bottom: 28px;
 }
 
-.route-list li a {
+.btn {
+  display: inline-block;
+  background: #072a83;
+  color: #fff;
+  font-family: Georgia, serif;
   font-size: 15px;
-  color: #072a83;
+  padding: 10px 22px;
+  border-radius: 4px;
   text-decoration: none;
-  font-weight: bold;
 }
 
-.route-list li a:hover {
-  text-decoration: underline;
-}
-
-footer {
-  text-align: center;
-  padding: 32px;
-  font-size: 13px;
-  color: #888;
-  border-top: 1px solid #ddd;
-  margin-top: 40px;
+.btn:hover {
+  background: #0a3aab;
 }
