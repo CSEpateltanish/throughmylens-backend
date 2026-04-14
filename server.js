@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const Joi = require('joi');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 var IMG_BASE = "https://csepateltanish.github.io/csce242/projects/part7/";
@@ -227,6 +229,45 @@ app.get('/api/photos', function(req, res) {
   res.json(photos);
 });
 
+var spots = [];
+
+var spotSchema = Joi.object({
+  name: Joi.string().min(2).required(),
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
+  locationName: Joi.string().min(2).required(),
+  city: Joi.string().min(2).required(),
+  spotType: Joi.string().valid('Golden Hour', 'Urban', 'Nature', 'Indoor').required(),
+  description: Joi.string().min(10).required(),
+  bestTime: Joi.string().valid('Early Morning / Sunrise', 'Morning', 'Midday', 'Afternoon', 'Golden Hour / Sunset', 'Blue Hour / Dusk', 'Night').required(),
+  image: Joi.string().allow(null, '').optional()
+});
+
+app.get('/api/spots', function(req, res) {
+  res.json(spots);
+});
+
+app.post('/api/spots', function(req, res) {
+  var result = spotSchema.validate(req.body);
+
+  if (result.error) {
+    return res.status(400).json({ success: false, message: result.error.details[0].message });
+  }
+
+  var newSpot = {
+    id: Date.now(),
+    name: result.value.name,
+    locationName: result.value.locationName,
+    city: result.value.city,
+    spotType: result.value.spotType,
+    description: result.value.description,
+    bestTime: result.value.bestTime,
+    image: result.value.image || null,
+    date: new Date().toLocaleDateString()
+  };
+
+  spots.push(newSpot);
+  res.json({ success: true, spot: newSpot });
+});
 
 app.listen(PORT, function() {
   console.log('Server running on port ' + PORT);
