@@ -3,14 +3,131 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Through My Lens Backend</title>
+  <title>Through My Lens — Backend</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <h1>Through My Lens API</h1>
-  <p>Browse the full photo detail library.</p>
-  <a class="btn" href="/api/photos">All Information</a>
+  <div class="topbar">
+    <div class="topbar-brand">
+      <h1>Through My Lens</h1>
+      <span class="topbar-sub">API &amp; Data Dashboard</span>
+    </div>
+    <div class="topbar-links">
+      <a href="/api/photos" class="api-link">GET /api/photos</a>
+      <a href="/api/spots" class="api-link">GET /api/spots</a>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Community Spots</h2>
+          <p>Submitted photography locations from the community feed.</p>
+        </div>
+        <button class="refresh-btn" onclick="loadSpots()">Refresh</button>
+      </div>
+      <div id="spots-container">
+        <p class="loading-text">Loading spots...</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Photo Library</h2>
+          <p>The full portfolio photo data served to the React frontend.</p>
+        </div>
+        <a href="/api/photos" class="refresh-btn">View Raw JSON</a>
+      </div>
+      <div id="photos-container">
+        <p class="loading-text">Loading photos...</p>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    function getBadgeClass(type) {
+      if (type === 'Golden Hour') return 'badge badge-golden';
+      if (type === 'Urban') return 'badge badge-urban';
+      if (type === 'Nature') return 'badge badge-nature';
+      if (type === 'Indoor') return 'badge badge-indoor';
+      return 'badge';
+    }
+
+    function loadSpots() {
+      var container = document.getElementById('spots-container');
+      container.innerHTML = '<p class="loading-text">Loading spots...</p>';
+
+      fetch('/api/spots')
+        .then(function(res) { return res.json(); })
+        .then(function(spots) {
+          if (spots.length === 0) {
+            container.innerHTML = '<p class="empty-text">No spots have been submitted yet. Submit one from the community page!</p>';
+            return;
+          }
+
+          var html = '<div class="card-grid">';
+          spots.forEach(function(spot) {
+            html += '<div class="card">';
+
+            if (spot.image) {
+              html += '<div class="card-img"><img src="' + spot.image + '" alt="' + spot.locationName + '" /></div>';
+            }
+
+            html += '<div class="card-body">';
+            html += '<p class="card-location">' + spot.locationName + '</p>';
+            html += '<p class="card-city">' + spot.city + '</p>';
+            html += '<div class="card-badges">';
+            html += '<span class="' + getBadgeClass(spot.spotType) + '">' + spot.spotType + '</span>';
+            html += '<span class="badge">' + spot.bestTime + '</span>';
+            html += '</div>';
+            html += '<p class="card-desc">' + spot.description + '</p>';
+            html += '<p class="card-meta">Submitted by <strong>' + spot.name + '</strong> &middot; ' + spot.date + '</p>';
+            html += '</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+
+          container.innerHTML = html;
+        })
+        .catch(function() {
+          container.innerHTML = '<p class="error-text">Failed to load spots.</p>';
+        });
+    }
+
+    function loadPhotos() {
+      var container = document.getElementById('photos-container');
+
+      fetch('/api/photos')
+        .then(function(res) { return res.json(); })
+        .then(function(photos) {
+          var html = '<div class="photo-table-wrap"><table class="photo-table">';
+          html += '<thead><tr><th>Title</th><th>Category</th><th>Location</th><th>Date</th><th>Camera</th></tr></thead>';
+          html += '<tbody>';
+          photos.forEach(function(photo) {
+            html += '<tr>';
+            html += '<td>' + photo.title + '</td>';
+            html += '<td><span class="cat-badge cat-' + photo.category + '">' + photo.category + '</span></td>';
+            html += '<td>' + photo.location + '</td>';
+            html += '<td>' + photo.date + '</td>';
+            html += '<td>' + photo.camera + '</td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table></div>';
+          container.innerHTML = html;
+        })
+        .catch(function() {
+          container.innerHTML = '<p class="error-text">Failed to load photos.</p>';
+        });
+    }
+
+    loadSpots();
+    loadPhotos();
+  </script>
 
 </body>
 </html>
