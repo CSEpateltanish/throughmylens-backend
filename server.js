@@ -269,6 +269,54 @@ app.post('/api/spots', function(req, res) {
   res.json({ success: true, spot: newSpot });
 });
 
+var editSchema = Joi.object({
+  name: Joi.string().min(2).required(),
+  locationName: Joi.string().min(2).required(),
+  city: Joi.string().min(2).required(),
+  spotType: Joi.string().valid('Golden Hour', 'Urban', 'Nature', 'Indoor').required(),
+  description: Joi.string().min(10).required(),
+  bestTime: Joi.string().valid('Early Morning / Sunrise', 'Morning', 'Midday', 'Afternoon', 'Golden Hour / Sunset', 'Blue Hour / Dusk', 'Night').required(),
+  image: Joi.string().allow(null, '').optional()
+});
+
+app.put('/api/spots/:id', function(req, res) {
+  var id = Number(req.params.id);
+  var index = spots.findIndex(function(s) { return s.id === id; });
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Spot not found.' });
+  }
+
+  var result = editSchema.validate(req.body);
+  if (result.error) {
+    return res.status(400).json({ success: false, message: result.error.details[0].message });
+  }
+
+  spots[index].name = result.value.name;
+  spots[index].locationName = result.value.locationName;
+  spots[index].city = result.value.city;
+  spots[index].spotType = result.value.spotType;
+  spots[index].description = result.value.description;
+  spots[index].bestTime = result.value.bestTime;
+  if (result.value.image) {
+    spots[index].image = result.value.image;
+  }
+
+  res.json({ success: true, spot: spots[index] });
+});
+
+app.delete('/api/spots/:id', function(req, res) {
+  var id = Number(req.params.id);
+  var index = spots.findIndex(function(s) { return s.id === id; });
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Spot not found.' });
+  }
+
+  spots.splice(index, 1);
+  res.json({ success: true });
+});
+
 app.listen(PORT, function() {
   console.log('Server running on port ' + PORT);
 });
