@@ -2,9 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const Joi = require('joi');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+mongoose
+  .connect(process.env.MONGODB_URI || 'mongodb+srv://tanish:sxMu4PkkkO35AYmF@cluster0.7jpnj1j.mongodb.net/throughmylens?appName=Cluster0')
+  .then(() => console.log('Connected to MongoDB...'))
+  .catch(err => console.error('Could not connect to MongoDB:', err));
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -225,12 +231,31 @@ var photos = [
   }
 ];
 
-app.get('/api/photos', function(req, res) {
-  res.json(photos);
+// ── Mongoose schema & model ──
+const SpotSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  locationName: { type: String, required: true },
+  city: { type: String, required: true },
+  spotType: { type: String, required: true },
+  description: { type: String, required: true },
+  bestTime: { type: String, required: true },
+  image: { type: String, default: null },
+  date: { type: String, default: () => new Date().toLocaleDateString() }
 });
 
-var spots = [];
+SpotSchema.set('toJSON', {
+  transform: function(doc, ret) {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
+const Spot = mongoose.model('Spot', SpotSchema);
+
+// ── Joi validation schemas ──
 var spotSchema = Joi.object({
   name: Joi.string().min(2).required(),
   email: Joi.string().email({ tlds: { allow: false } }).required(),
@@ -240,33 +265,6 @@ var spotSchema = Joi.object({
   description: Joi.string().min(10).required(),
   bestTime: Joi.string().valid('Early Morning / Sunrise', 'Morning', 'Midday', 'Afternoon', 'Golden Hour / Sunset', 'Blue Hour / Dusk', 'Night').required(),
   image: Joi.string().allow(null, '').optional()
-});
-
-app.get('/api/spots', function(req, res) {
-  res.json(spots);
-});
-
-app.post('/api/spots', function(req, res) {
-  var result = spotSchema.validate(req.body);
-
-  if (result.error) {
-    return res.status(400).json({ success: false, message: result.error.details[0].message });
-  }
-
-  var newSpot = {
-    id: Date.now(),
-    name: result.value.name,
-    locationName: result.value.locationName,
-    city: result.value.city,
-    spotType: result.value.spotType,
-    description: result.value.description,
-    bestTime: result.value.bestTime,
-    image: result.value.image || null,
-    date: new Date().toLocaleDateString()
-  };
-
-  spots.push(newSpot);
-  res.json({ success: true, spot: newSpot });
 });
 
 var editSchema = Joi.object({
@@ -279,42 +277,82 @@ var editSchema = Joi.object({
   image: Joi.string().allow(null, '').optional()
 });
 
-app.put('/api/spots/:id', function(req, res) {
-  var id = Number(req.params.id);
-  var index = spots.findIndex(function(s) { return s.id === id; });
+app.get('/api/photos', function(req, res) {
+  res.json(photos);
+});
 
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Spot not found.' });
+app.get('/api/spots', async function(req, res) {
+  try {
+    var spots = await Spot.find().sort({ _id: -1 });
+    res.json(spots);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+app.post('/api/spots', async function(req, res) {
+  var result = spotSchema.validate(req.body);
+  if (result.error) {
+    return res.status(400).json({ success: false, message: result.error.details[0].message });
   }
 
+  try {
+    var newSpot = new Spot({
+      name: result.value.name,
+      email: result.value.email,
+      locationName: result.value.locationName,
+      city: result.value.city,
+      spotType: result.value.spotType,
+      description: result.value.description,
+      bestTime: result.value.bestTime,
+      image: result.value.image || null,
+      date: new Date().toLocaleDateString()
+    });
+    await newSpot.save();
+    res.json({ success: true, spot: newSpot });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+app.put('/api/spots/:id', async function(req, res) {
   var result = editSchema.validate(req.body);
   if (result.error) {
     return res.status(400).json({ success: false, message: result.error.details[0].message });
   }
 
-  spots[index].name = result.value.name;
-  spots[index].locationName = result.value.locationName;
-  spots[index].city = result.value.city;
-  spots[index].spotType = result.value.spotType;
-  spots[index].description = result.value.description;
-  spots[index].bestTime = result.value.bestTime;
-  if (result.value.image) {
-    spots[index].image = result.value.image;
+  try {
+    var update = {
+      name: result.value.name,
+      locationName: result.value.locationName,
+      city: result.value.city,
+      spotType: result.value.spotType,
+      description: result.value.description,
+      bestTime: result.value.bestTime
+    };
+    if (result.value.image) {
+      update.image = result.value.image;
+    }
+    var spot = await Spot.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!spot) {
+      return res.status(404).json({ success: false, message: 'Spot not found.' });
+    }
+    res.json({ success: true, spot: spot });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error.' });
   }
-
-  res.json({ success: true, spot: spots[index] });
 });
 
-app.delete('/api/spots/:id', function(req, res) {
-  var id = Number(req.params.id);
-  var index = spots.findIndex(function(s) { return s.id === id; });
-
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Spot not found.' });
+app.delete('/api/spots/:id', async function(req, res) {
+  try {
+    var spot = await Spot.findByIdAndDelete(req.params.id);
+    if (!spot) {
+      return res.status(404).json({ success: false, message: 'Spot not found.' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error.' });
   }
-
-  spots.splice(index, 1);
-  res.json({ success: true });
 });
 
 app.listen(PORT, function() {
